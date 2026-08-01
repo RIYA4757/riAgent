@@ -10,4 +10,7 @@ export class ToolRegistry {
   getTools() {
     return this.tools;
   }
+  getTool(name: string) {
+    return this.tools.find((tool) => tool.name === name);
+  }
 }
