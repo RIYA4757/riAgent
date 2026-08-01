@@ -1,64 +1,65 @@
 import { AgentConfig, AgentResult } from "../types";
 import { Tool } from "../tools/Tool";
 import { ToolRegistry } from "../tools/ToolRegistry";
+import { AgentRunner } from "../runtime/AgentRunner";
 
 export class Agent {
     private toolRegistry = new ToolRegistry();
+    constructor(private config: AgentConfig) {}
+
     addTool(tool: Tool) {
         this.toolRegistry.register(tool);
     }
     getTools() {
         return this.toolRegistry.getTools();
     }
-    constructor(private config: AgentConfig) { }
+    // constructor(private config: AgentConfig) { }
 
     async run(userInput: string): Promise<AgentResult> {
-        const tools = this.toolRegistry.getTools();
-        console.log("Available Tools:", tools);
-        //     const prompt = `
+        const runner = new AgentRunner();
+        return runner.run(this, userInput);
+    }    // const tools = this.toolRegistry.getTools();
+        // console.log("Available Tools:", tools);
+        // //     const prompt = `
         // System Instructions:
         // ${this.config.instructions}
 
         // User:
         // ${userInput}
         // `;
-        const toolDescriptions = tools
+        public async execute(userInput: string): Promise<AgentResult> {
+            const tools = this.toolRegistry.getTools();
+            console.log("Available Tools:", tools);
+            const toolDescriptions = tools
             .map(
                 (tool) => `
-Tool Name: ${tool.name}
-Description: ${tool.description}
-`
+    Tool Name: ${tool.name}
+    Description: ${tool.description}
+    `
             )
-            .join("\n");
+                .join("\n");
 
-        const prompt = `
-You are an AI Agent.
+            const prompt = `
+    You are an AI Agent.
+    Instructions:
+    ${this.config.instructions}
+    Available Tools:
+    ${toolDescriptions}
+    When you need a tool, respond ONLY with JSON like:
+    {
+        "action":"tool",
+        "tool":"toolName",
+        "input":{}
+    }
+    Otherwise respond:
+    {
+    "action":"final",
+    "answer":"..."
+    }
 
-Instructions:
-${this.config.instructions}
-
-Available Tools:
-${toolDescriptions}
-
-When you need a tool, respond ONLY with JSON like:
-
-{
-  "action":"tool",
-  "tool":"toolName",
-  "input":{}
-}
-
-Otherwise respond:
-
-{
-  "action":"final",
-  "answer":"..."
-}
-
-User:
-${userInput}
-`;
-
+    User:
+    ${userInput}
+    `;
         const output = await this.config.model.generate(prompt);
         console.log(output);
         const response = JSON.parse(output);
