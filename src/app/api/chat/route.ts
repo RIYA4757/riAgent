@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { Agent, OpenAIProvider } from "@/sdk";
 import { calculatorTool } from "@/examples/calculatorTool";
 import { weatherTool } from "@/examples/weatherTool";
-
-export async function POST(req: Request) {
-  try {
-    const { message } = await req.json();
+import { dateTimeTool } from "@/examples/dateTimeTool";
+import { uuidTool } from "@/examples/uuidTool";
 
     const agent = new Agent({
       instructions: "You are a helpful AI assistant.",
@@ -13,13 +11,21 @@ export async function POST(req: Request) {
     });
     agent.addTool(weatherTool);
     agent.addTool(calculatorTool);
-    const result = await agent.run(message);
+    agent.addTool(dateTimeTool);
+    agent.addTool(uuidTool);
+    console.log(agent.getTools().length);
 
-    return NextResponse.json(result);
-  } catch (err) {
-    console.error(err);
+    export async function POST(req: Request) {
+         try {
+            const { message, sessionId } = await req.json();
+            console.log("Session ID:", sessionId);
+            const result = await agent.run(message, sessionId );
 
-    return NextResponse.json(
+         return NextResponse.json(result);
+        } catch (err) {
+        console.error(err);
+
+        return NextResponse.json(
       { error: "Agent failed" },
       { status: 500 }
     );

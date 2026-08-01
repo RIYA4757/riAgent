@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 // import { Agent, OpenAIProvider } from "@/sdk";
 
 export default function Home() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const sessionId = useRef(crypto.randomUUID());
+  useState(() => crypto.randomUUID())
   async function askAgent() {
     setLoading(true);
 
@@ -19,7 +20,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           message: question,
-        }),
+          sessionId,
+          }),
       });
 
       const data = await response.json();

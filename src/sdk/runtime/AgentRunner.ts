@@ -1,19 +1,35 @@
 import { Agent } from "../agent/Agent";
+import { Message } from "../memory/Session";
 
 export class AgentRunner {
-  async run(agent: Agent, userInput: string) {
-    const tools = agent.getTools();
-
-    const toolDescriptions = tools
-      .map(
-        (tool) => `
+    async run(
+        agent: Agent, 
+        userInput: string,
+        sessionId: string
+    ) {
+        const tools = agent.getTools();
+        const session = agent.getMemory().getSession("sessionId");
+        session.addMessage({
+            role: "user",
+            content: userInput,
+        });
+        const toolDescriptions = tools
+            .map(
+                (tool) => `
 Tool Name: ${tool.name}
 Description: ${tool.description}
 `
-      )
-      .join("\n");
+            )
+            .join("\n");
+        const history = session
+            .getMessages()
+            .map(
+                (message) =>
+                    `${message.role.toUpperCase()}: ${message.content}`
+            )
+            .join("\n");
 
-    const prompt = `
+        const prompt = `
 You are an AI Agent.
 
 Instructions:
@@ -22,7 +38,11 @@ ${agent.getInstructions()}
 Available Tools:
 ${toolDescriptions}
 
-When you need a tool, respond ONLY with JSON like:
+A user request may require MULTIPLE tools.
+
+Call ONE tool at a time.
+
+When you need a tool, respond ONLY with JSON:
 
 {
   "action":"tool",
@@ -30,83 +50,141 @@ When you need a tool, respond ONLY with JSON like:
   "input":{}
 }
 
-Otherwise respond:
+After each tool result, you will be asked again what to do next.
+
+Continue requesting tools until every part of the user's request has been completed.
+
+Only then respond with:
 
 {
   "action":"final",
   "answer":"..."
 }
 
-User:
+Otherwise respond:
+{
+  "action":"final",
+  "answer":"..."
+}
+
+Conversation History:
+
+${history}
+
+Current User:
+
 ${userInput}
 `;
+        console.log("========== PROMPT ==========");
+        console.log(prompt);
+        console.log("============================");
+        const output = await agent.getModel().generate(prompt);
 
-    const output = await agent.getModel().generate(prompt);
+        console.log(output);
 
-    console.log(output);
+        const response = JSON.parse(output);
 
-    const response = JSON.parse(output);
-
-    console.log(response);
-
-    // if (response.action === "tool") {
-    //   const tool = agent.getTool(response.tool);
+        console.log(response);
+        let scratchpad = "";
+        // if (response.action === "tool") {
+        //   const tool = agent.getTool(response.tool);
         let currentResponse = response;
         let iterations = 0;
 
         while (currentResponse.action === "tool" && iterations < 5) {
             iterations++;
-        const tool = agent.getTool(currentResponse.tool);
-      if (!tool) {
+            const tool = agent.getTool(currentResponse.tool);
+            if (!tool) {
+                return {
+                    output: `Tool ${currentResponse.tool} not found.`,
+                };
+            }
+
+            // const toolResult = await tool.execute(currentResponse.input);
+            let toolResult;
+
+                try {
+                const validation = tool.schema.safeParse(currentResponse.input);
+                if (!validation.success) {
+                    return {
+                        output: `Invalid input for tool "${tool.name}": ${validation.error.message}`,
+                    };
+                }
+                toolResult = await tool.execute(validation.data);
+            } catch (error) {
+                return {
+                    output: `Tool "${currentResponse.tool}" failed: ${
+                        error instanceof Error ? error.message : "Unknown error"
+                    }`,
+                };
+            }
+            scratchpad += `
+            Tool Executed:
+            ${currentResponse.tool}
+            Input:
+            ${JSON.stringify(currentResponse.input)}
+            Output:
+            ${JSON.stringify(toolResult)}
+            ------------------------
+        `;
+            const nextPrompt = `
+            You are an AI Agent.
+
+            Instructions:
+            ${agent.getInstructions()}
+
+            Conversation History:
+
+            ${history}
+
+            Current User:
+
+            ${userInput}
+
+            Tools already executed:
+
+            ${scratchpad}
+
+            Available Tools:
+
+            ${toolDescriptions}
+
+            If more tools are required,
+            respond ONLY with:
+
+            {
+            "action":"tool",
+            "tool":"toolName",
+            "input":{}
+            }
+
+            If the user's request is completely fulfilled,
+            respond ONLY with:
+
+            {
+            "action":"final",
+            "answer":"..."
+            }
+            `;
+
+            const nextOutput = await agent.getModel().generate(nextPrompt);
+
+            console.log(nextOutput);
+
+            currentResponse = JSON.parse(nextOutput);
+        }
+        if (currentResponse.action === "final") {
+            session.addMessage({
+                role: "assistant",
+                content: currentResponse.answer,
+            });
+            return {
+                output: currentResponse.answer,
+            };
+        }
+
         return {
-          output: `Tool ${response.tool} not found.`,
+            output: "Maximum iterations reached.",
         };
-      }
-
-      const toolResult = await tool.execute(currentResponse.input);
-
-      const nextPrompt = `
-You are the AI agent.
-
-The user originally asked:
-
-${userInput}
-
-The tool "${currentResponse.tool}" returned:
-
-${JSON.stringify(toolResult)}
-
-If another tool is required,
-respond again with
-
-{
- "action":"tool",
- "tool":"...",
- "input":{}
-}
-
-Otherwise respond
-
-{
- "action":"final",
- "answer":"..."
-}
-`;
-
-    const nextOutput = await agent.getModel().generate(nextPrompt);
-
-    console.log(nextOutput);
-
-    currentResponse = JSON.parse(nextOutput);
-}
-if (currentResponse.action === "final") {
-    return {
-        output: currentResponse.answer,
-    };
-}
-
-return {
-    output: "Maximum iterations reached.",
-};
-}
+    }
 }   
