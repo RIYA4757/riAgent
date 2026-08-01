@@ -4,6 +4,7 @@ import { calculatorTool } from "@/examples/calculatorTool";
 import { weatherTool } from "@/examples/weatherTool";
 import { dateTimeTool } from "@/examples/dateTimeTool";
 import { uuidTool } from "@/examples/uuidTool";
+import { RealInputGuardrail } from "@/sdk/guardrails/RealInputGuardrail";
 
     const agent = new Agent({
       instructions: "You are a helpful AI assistant.",
@@ -13,6 +14,7 @@ import { uuidTool } from "@/examples/uuidTool";
     agent.addTool(calculatorTool);
     agent.addTool(dateTimeTool);
     agent.addTool(uuidTool);
+    agent.addInputGuardrail(new RealInputGuardrail());
     console.log(agent.getTools().length);
 
     export async function POST(req: Request) {

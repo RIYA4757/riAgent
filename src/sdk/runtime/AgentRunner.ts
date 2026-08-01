@@ -9,6 +9,15 @@ export class AgentRunner {
     ) {
         const tools = agent.getTools();
         const session = agent.getMemory().getSession("sessionId");
+        for (const guardrail of agent.getInputGuardrails()) {
+           const result = await guardrail.check(userInput);
+
+            if (!result.allowed) {
+                return {
+                    output: result.reason ?? "Input blocked.",
+                };
+            }
+        }
         session.addMessage({
             role: "user",
             content: userInput,

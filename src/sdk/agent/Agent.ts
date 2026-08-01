@@ -3,16 +3,34 @@ import { Tool } from "../tools/Tool";
 import { ToolRegistry } from "../tools/ToolRegistry";
 import { AgentRunner } from "../runtime/AgentRunner";
 import { MemoryStore } from "../memory/MemoryStore";
+import { InputGuardrail } from "../guardrails/InputGuardrail";
+import { OutputGuardrail } from "../guardrails/OutputGuardrail";
+import { ToolGuardrail } from "../guardrails/ToolGuardrail";
 
 
 export class Agent {
     private toolRegistry = new ToolRegistry();
     private memory = new MemoryStore();
+    private inputGuardrails: InputGuardrail[] = [];
+    private outputGuardrails: OutputGuardrail[] = [];
+    private toolGuardrails: ToolGuardrail[] = [];
 
     constructor(private config: AgentConfig) { }
     addTool(tool: Tool) {
         this.toolRegistry.register(tool);
     }
+            addInputGuardrail(guardrail: InputGuardrail) {
+            this.inputGuardrails.push(guardrail);
+        }
+
+        addOutputGuardrail(guardrail: OutputGuardrail) {
+            this.outputGuardrails.push(guardrail);
+        }
+
+        addToolGuardrail(guardrail: ToolGuardrail) {
+            this.toolGuardrails.push(guardrail);
+        }
+    
     getTools() {
         return this.toolRegistry.getTools();
     }
@@ -29,6 +47,17 @@ export class Agent {
 
     getTool(name: string) {
         return this.toolRegistry.getTool(name);
+    }
+    getInputGuardrails() {
+        return this.inputGuardrails;
+    }
+
+    getOutputGuardrails() {
+        return this.outputGuardrails;
+    }
+
+    getToolGuardrails() {
+        return this.toolGuardrails;
     }
             async run(
             userInput: string,
