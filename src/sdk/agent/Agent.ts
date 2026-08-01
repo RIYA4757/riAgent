@@ -13,6 +13,17 @@ export class Agent {
     getTools() {
         return this.toolRegistry.getTools();
     }
+    getInstructions() {
+        return this.config.instructions;
+    }
+
+    getModel() {
+        return this.config.model;
+    }
+
+    getTool(name: string) {
+        return this.toolRegistry.getTool(name);
+    }
     // constructor(private config: AgentConfig) { }
 
     async run(userInput: string): Promise<AgentResult> {
@@ -28,71 +39,72 @@ export class Agent {
         // ${userInput}
         // `;
         public async execute(userInput: string): Promise<AgentResult> {
-            const tools = this.toolRegistry.getTools();
-            console.log("Available Tools:", tools);
-            const toolDescriptions = tools
-            .map(
-                (tool) => `
-    Tool Name: ${tool.name}
-    Description: ${tool.description}
-    `
-            )
-                .join("\n");
+               const output = await this.config.model.generate(userInput);
+    //         const tools = this.toolRegistry.getTools();
+    //         console.log("Available Tools:", tools);
+    //         const toolDescriptions = tools
+    //         .map(
+    //             (tool) => `
+    // Tool Name: ${tool.name}
+    // Description: ${tool.description}
+    // `
+    //         )
+    //             .join("\n");
 
-            const prompt = `
-    You are an AI Agent.
-    Instructions:
-    ${this.config.instructions}
-    Available Tools:
-    ${toolDescriptions}
-    When you need a tool, respond ONLY with JSON like:
-    {
-        "action":"tool",
-        "tool":"toolName",
-        "input":{}
-    }
-    Otherwise respond:
-    {
-    "action":"final",
-    "answer":"..."
-    }
+    //         const prompt = `
+    // You are an AI Agent.
+    // Instructions:
+    // ${this.config.instructions}
+    // Available Tools:
+    // ${toolDescriptions}
+    // When you need a tool, respond ONLY with JSON like:
+    // {
+    //     "action":"tool",
+    //     "tool":"toolName",
+    //     "input":{}
+    // }
+    // Otherwise respond:
+    // {
+    // "action":"final",
+    // "answer":"..."
+    // }
 
-    User:
-    ${userInput}
-    `;
-        const output = await this.config.model.generate(prompt);
-        console.log(output);
-        const response = JSON.parse(output);
-        console.log(response);
-        if (response.action === "tool") {
-            const tool = this.toolRegistry.getTool(response.tool);
+    // User:
+    // ${userInput}
+    // `;
+    //     const output = await this.config.model.generate(prompt);
+    //     console.log(output);
+    //     const response = JSON.parse(output);
+    //     console.log(response);
+    //     if (response.action === "tool") {
+    //         const tool = this.toolRegistry.getTool(response.tool);
 
-            if (!tool) {
-                return {
-                    output: `Tool ${response.tool} not found.`,
-                };
-            }
+    //         if (!tool) {
+    //             return {
+    //                 output: `Tool ${response.tool} not found.`,
+    //             };
+    //         }
 
-            const toolResult = await tool.execute(response.input);
+    //         const toolResult = await tool.execute(response.input);
 
-            //   console.log("Tool Result:", toolResult);
+    //         //   console.log("Tool Result:", toolResult);
 
-            //   return {
-            //       output: JSON.stringify(toolResult),
-            //   };
-            const finalPrompt = `
-    You are the AI agent.
-    The tool returned:
-    ${JSON.stringify(toolResult)}
-    Answer the user's original question naturally.
-    Original Question:
-    ${userInput}
-    `;
-            const finalAnswer = await this.config.model.generate(finalPrompt);
-            return {
-                output: finalAnswer,
-            };
-        }
+    //         //   return {
+    //         //       output: JSON.stringify(toolResult),
+    //         //   };
+    //         const finalPrompt = `
+    // You are the AI agent.
+    // The tool returned:
+    // ${JSON.stringify(toolResult)}
+    // Answer the user's original question naturally.
+    // Original Question:
+    // ${userInput}
+    // `;
+    //         const finalAnswer = await this.config.model.generate(finalPrompt);
+    //         return {
+    //             output: finalAnswer,
+    //         };
+    //     }
         return {
             output,
         };
