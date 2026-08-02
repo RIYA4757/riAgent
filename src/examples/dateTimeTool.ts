@@ -4,7 +4,7 @@ import { Tool } from "@/sdk";
 export const dateTimeTool: Tool = {
   name: "dateTime",
 
-  description: "Returns the current date and time.",
+ description: "Returns the current date and time in the configured timezone.",
 
   schema: z.object({}),
 
@@ -13,7 +13,11 @@ export const dateTimeTool: Tool = {
 
   return {
     iso: now.toISOString(),
-    local: now.toString(),
+    local: now.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "full",
+      timeStyle: "long",
+    }),
     timestamp: now.getTime(),
   };
 },

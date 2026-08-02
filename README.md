@@ -36,6 +36,20 @@ A lightweight, extensible TypeScript SDK for building AI agents.
 - License
 
 ---
+## Live Demo
+
+**Application:** https://ri-agent.vercel.app/
+
+The live deployment demonstrates:
+
+- Agent Runtime
+- Tool Calling
+- Multi-Agent Handoffs
+- Memory & Sessions
+- Guardrails
+- Structured Output
+---
+
 
 # Overview
 
