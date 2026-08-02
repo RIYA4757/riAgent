@@ -715,36 +715,18 @@ This feature enables developers to build applications requiring structured data 
 
 # Model Provider Abstraction
 
-RiAgent SDK is designed to remain independent of any specific language model provider.
+The SDK uses a ModelProvider interface to decouple the agent runtime from any specific LLM provider.
 
-The runtime communicates through a common `ModelProvider` interface.
+Implemented:
 
-Current implementation:
+✅ OpenAIProvider
 
-- OpenAIProvider
+Example provider implementations:
 
-Architecture:
+ClaudeProvider
+GeminiProvider
 
-```
-Agent
-   │
-   ▼
-ModelProvider
-   │
-   ▼
-OpenAIProvider
-   │
-   ▼
-OpenAI API
-```
-
-| Provider | Status |
-|----------|--------|
-| OpenAIProvider |  Fully Implemented |
-| ClaudeProvider |  Architecture Ready (API integration pending) |
-| GeminiProvider |  Architecture Ready (API integration pending) |
-
-The runtime depends only on the `ModelProvider` interface, allowing additional providers to be integrated without modifying the Agent Runtime.
+These demonstrate how additional providers can be integrated by implementing the same interface.
 
 # Streaming & Events
 
