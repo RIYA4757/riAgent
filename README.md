@@ -681,6 +681,73 @@ Final Response
 - Loop prevention
 
 ---
+## Multi-Agent Handoffs
+
+RiAgent SDK supports **executable multi-agent handoffs**, allowing the primary agent to delegate requests to specialized agents based on the user's intent.
+
+Currently supported specialized agents include:
+
+- Weather Agent
+- Math Agent
+- Coding Agent
+- Research Agent
+
+Each delegated agent:
+
+- Has its own instructions and behavior.
+- Can register its own tools.
+- Executes its own agent runtime.
+- Produces the final response independently.
+
+This modular design allows developers to easily extend the SDK by introducing additional domain-specific agents without modifying the primary runtime.
+
+### Current Implementation
+
+To keep execution modular and isolated, every delegated agent maintains its own runtime state, memory, and trace manager.
+
+As a result:
+
+- The primary agent emits the **`handoff.started`** event before delegation.
+- The delegated agent executes the complete request independently.
+- The required execution context is preserved during delegation.
+- Endless handoff loops are prevented by the runtime execution flow.
+
+> **Future Enhancement:** Introduce a shared execution context that allows all delegated agents to contribute to a single end-to-end execution trace while preserving modular agent architecture.
+
+---
+
+# Tracing & Reliability
+
+RiAgent SDK provides runtime tracing and event logging to simplify debugging and improve visibility into agent execution.
+
+Each agent run records useful runtime information, including:
+
+- Run ID
+- Agent Name
+- Runtime Events
+- Tool Selection
+- Tool Execution
+- Handoff Events
+- Guardrail Execution
+- Final Output
+
+Tracing information is available through the SDK's `TraceManager`, while runtime events are emitted through the built-in event system.
+
+### Current Trace Behavior
+
+In the current implementation, **each agent maintains its own `TraceManager`**.
+
+This means:
+
+- Standard agent executions are traced independently.
+- During multi-agent handoffs, the delegated agent maintains its own execution trace.
+- Runtime events such as **`handoff.started`**, **`tool.selected`**, **`tool.executed`**, **`guardrail.input.passed`**, **`guardrail.output.passed`**, and **`agent.finished`** are emitted correctly throughout execution.
+
+This design keeps agent execution modular and isolated while providing detailed debugging information for each individual agent run.
+
+> **Future Enhancement:** Support a shared trace context so that an entire execution chain (Primary Agent → Delegated Agent → Tool Calls) can be visualized as a single unified trace.
+
+---
 
 # Structured Output
 
