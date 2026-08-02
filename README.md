@@ -738,15 +738,14 @@ OpenAIProvider
 OpenAI API
 ```
 
-Future providers can be added by implementing the same interface.
+| Provider | Status |
+|----------|--------|
+| OpenAIProvider |  Fully Implemented |
+| ClaudeProvider |  Architecture Ready (API integration pending) |
+| GeminiProvider |  Architecture Ready (API integration pending) |
 
-Possible implementations include:
+The runtime depends only on the `ModelProvider` interface, allowing additional providers to be integrated without modifying the Agent Runtime.
 
-- ClaudeProvider
-- GeminiProvider
-- GroqProvider
-
-No changes to the runtime are required when introducing a new provider, making the SDK easily extensible.
 # Streaming & Events
 
 RiAgent SDK includes an event-driven architecture that allows developers to observe and react to different stages of the agent execution lifecycle.
