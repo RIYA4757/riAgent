@@ -183,6 +183,16 @@ ${userInput}
             currentResponse = JSON.parse(nextOutput);
         }
         if (currentResponse.action === "final") {
+                for (const guardrail of agent.getOutputGuardrails()) {
+
+                    const result = await guardrail.check(currentResponse.answer);
+
+                    if (!result.allowed) {
+                     return {
+                        output: result.reason ?? "Output blocked by guardrail.",
+                    };
+                }
+            }
             session.addMessage({
                 role: "assistant",
                 content: currentResponse.answer,
