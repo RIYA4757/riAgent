@@ -6,6 +6,7 @@ import { dateTimeTool } from "@/examples/dateTimeTool";
 import { uuidTool } from "@/examples/uuidTool";
 import { RealInputGuardrail } from "@/sdk/guardrails/RealInputGuardrail";
 import { RealOutputGuardrail } from "@/sdk/guardrails/RealOutputGuardrail";
+import { RealToolGuardrail } from "@/sdk/guardrails/RealToolGuardrail";
 
     const agent = new Agent({
       instructions: "You are a helpful AI assistant.",
@@ -15,9 +16,13 @@ import { RealOutputGuardrail } from "@/sdk/guardrails/RealOutputGuardrail";
     agent.addTool(calculatorTool);
     agent.addTool(dateTimeTool);
     agent.addTool(uuidTool);
+    agent.addToolGuardrail(new RealToolGuardrail());
     agent.addInputGuardrail(new RealInputGuardrail());
     agent.addOutputGuardrail(new RealOutputGuardrail());
     console.log(agent.getTools().length);
+    agent.getEvents().on((event) => {
+    console.log(`[EVENT] ${event.type}` , event);
+});
 
     export async function POST(req: Request) {
          try {

@@ -20,7 +20,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           message: question,
-          sessionId,
+          sessionId: sessionId.current,
           }),
       });
 

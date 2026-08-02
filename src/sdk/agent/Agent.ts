@@ -6,6 +6,7 @@ import { MemoryStore } from "../memory/MemoryStore";
 import { InputGuardrail } from "../guardrails/InputGuardrail";
 import { OutputGuardrail } from "../guardrails/OutputGuardrail";
 import { ToolGuardrail } from "../guardrails/ToolGuardrail";
+import { EventEmitter } from "../events/EventEmitter";
 
 
 export class Agent {
@@ -14,6 +15,10 @@ export class Agent {
     private inputGuardrails: InputGuardrail[] = [];
     private outputGuardrails: OutputGuardrail[] = [];
     private toolGuardrails: ToolGuardrail[] = [];
+    private readonly events = new EventEmitter();
+    getEvents() {
+    return this.events;
+    }
 
     constructor(private config: AgentConfig) { }
     addTool(tool: Tool) {

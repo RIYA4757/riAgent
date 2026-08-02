@@ -7,12 +7,12 @@ export const weatherTool: Tool = {
   description: "Get current weather",
 
   schema: z.object({
-    city: z.string(),
+    location: z.string(),
   }),
 
   async execute(input) {
     return {
-      city: input.city,
+      city: input.location,
       temperature: "29°C",
       condition: "Sunny",
     };

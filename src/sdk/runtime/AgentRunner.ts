@@ -1,6 +1,7 @@
 import { Agent } from "../agent/Agent";
 import { Message } from "../memory/Session";
 
+
 export class AgentRunner {
     async run(
         agent: Agent, 
@@ -9,15 +10,32 @@ export class AgentRunner {
     ) {
         const tools = agent.getTools();
         const session = agent.getMemory().getSession("sessionId");
+        agent.getEvents().emit({
+            type: "agent.started",
+            timestamp: new Date(),
+            data: {
+                sessionId,
+                userInput,
+            },
+        });
         for (const guardrail of agent.getInputGuardrails()) {
            const result = await guardrail.check(userInput);
 
             if (!result.allowed) {
+                agent.getEvents().emit({
+                    type: "guardrail.input.blocked",
+                    timestamp: new Date(),
+                    data: result,
+                });
                 return {
                     output: result.reason ?? "Input blocked.",
                 };
             }
         }
+        agent.getEvents().emit({
+            type: "guardrail.input.passed",
+            timestamp: new Date(),
+        });
         session.addMessage({
             role: "user",
             content: userInput,
@@ -102,13 +120,32 @@ ${userInput}
 
         while (currentResponse.action === "tool" && iterations < 5) {
             iterations++;
+            agent.getEvents().emit({
+                type: "tool.selected",
+                timestamp: new Date(),
+                data: {
+                    tool: currentResponse.tool,
+                },
+            });
             const tool = agent.getTool(currentResponse.tool);
             if (!tool) {
                 return {
                     output: `Tool ${currentResponse.tool} not found.`,
                 };
             }
+            for (const guardrail of agent.getToolGuardrails()) {
 
+                const result = await guardrail.check({
+                    tool: currentResponse.tool,
+                    input: currentResponse.input,
+                });
+
+                if (!result.allowed) {
+                    return {
+                        output: result.reason ?? "Tool execution blocked.",
+                    };
+                }
+            }
             // const toolResult = await tool.execute(currentResponse.input);
             let toolResult;
 
@@ -120,6 +157,15 @@ ${userInput}
                     };
                 }
                 toolResult = await tool.execute(validation.data);
+                agent.getEvents().emit({
+                    type: "tool.executed",
+                    timestamp: new Date(),
+                    data: {
+                        tool: currentResponse.tool,
+                        input: validation.data,
+                        output: toolResult,
+                    },
+                });
             } catch (error) {
                 return {
                     output: `Tool "${currentResponse.tool}" failed: ${
@@ -188,14 +234,30 @@ ${userInput}
                     const result = await guardrail.check(currentResponse.answer);
 
                     if (!result.allowed) {
+                     agent.getEvents().emit({
+                        type: "guardrail.output.blocked",
+                        timestamp: new Date(),
+                        data: result,
+                    });
                      return {
                         output: result.reason ?? "Output blocked by guardrail.",
                     };
                 }
             }
+            agent.getEvents().emit({
+                type: "guardrail.output.passed",
+                timestamp: new Date(),
+            });
             session.addMessage({
                 role: "assistant",
                 content: currentResponse.answer,
+            });
+            agent.getEvents().emit({
+                type: "agent.finished",
+                timestamp: new Date(),
+                data: {
+                    sessionId,
+                },
             });
             return {
                 output: currentResponse.answer,
