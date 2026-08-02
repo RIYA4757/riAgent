@@ -1,4 +1,23 @@
-export const codingHandoff = {
+import { Agent, OpenAIProvider } from "@/sdk";
+import { Handoff } from "@/sdk/handoffs/Handoff";
+
+const codingAgent = new Agent({
+    instructions: `
+You are a coding assistant.
+
+Help users with:
+- Programming
+- Debugging
+- Algorithms
+- Data Structures
+- LeetCode
+- Code explanations
+`,
+    model: new OpenAIProvider(),
+});
+
+
+export const codingHandoff: Handoff = {
     agentName: "Coding Agent",
 
     canHandle(input: string) {
@@ -23,5 +42,9 @@ export const codingHandoff = {
             text.includes("leetcode") ||
             text.includes("bug")
         );
-    }
+    },
+
+    async execute(input, sessionId) {
+        return codingAgent.run(input, sessionId);
+    },
 };

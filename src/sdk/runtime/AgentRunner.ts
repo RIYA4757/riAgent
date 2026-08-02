@@ -25,9 +25,8 @@ export class AgentRunner {
                     content: `Task handed off to ${handoff.agentName}`,
                 });
 
-                return {
-                    output: `Task handed off to ${handoff.agentName}`,
-                };
+                // 
+                return await handoff.execute(userInput, sessionId);
             }
         }
         agent.getEvents().emit({

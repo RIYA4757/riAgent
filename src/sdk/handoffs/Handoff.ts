@@ -1,4 +1,12 @@
+import { AgentResult } from "../types";
+
 export interface Handoff {
-    canHandle(input: string): boolean;
     agentName: string;
+
+    canHandle(input: string): boolean;
+
+    execute(
+        input: string,
+        sessionId: string
+    ): Promise<AgentResult>;
 }
