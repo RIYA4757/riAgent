@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 
 export default function Home() {
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState<unknown>("");
   const [loading, setLoading] = useState(false);
   const sessionId = useRef(crypto.randomUUID());
   useState(() => crypto.randomUUID())
@@ -56,9 +56,11 @@ export default function Home() {
         {loading ? "Thinking..." : "Run Agent"}
       </button>
 
-      <div className="mt-8 border rounded p-4 whitespace-pre-wrap">
-        {answer}
-      </div>
+      <pre className="mt-8 border rounded p-4 whitespace-pre-wrap">
+         {typeof answer === "object"
+            ? JSON.stringify(answer, null, 2)
+            : String(answer)}
+      </pre>
     </main>
   );
 }

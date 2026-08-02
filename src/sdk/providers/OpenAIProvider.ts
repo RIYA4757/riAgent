@@ -17,11 +17,29 @@ export class OpenAIProvider implements ModelProvider {
   }
 
   async generate(prompt: string): Promise<string> {
-    const response = await this.client.responses.create({
+     const response = await this.client.responses.create({
       model: this.model,
       input: prompt,
     });
 
     return response.output_text;
   }
-}
+        async *generateStream(
+  prompt: string
+): AsyncIterable<string> {
+
+  const stream = await this.client.responses.create({
+    model: this.model,
+    input: prompt,
+    stream: true,
+  });
+
+  for await (const event of stream) {
+
+    if (
+      event.type === "response.output_text.delta"
+    ) {
+      yield event.delta;
+    }
+  }
+}}

@@ -7,9 +7,14 @@ import { InputGuardrail } from "../guardrails/InputGuardrail";
 import { OutputGuardrail } from "../guardrails/OutputGuardrail";
 import { ToolGuardrail } from "../guardrails/ToolGuardrail";
 import { EventEmitter } from "../events/EventEmitter";
-
+import { StructuredOutput } from "../types/StructuredOutput";
+import { Handoff } from "../handoffs/Handoff";
+import { TraceManager } from "../tracing/TraceManager";
 
 export class Agent {
+    private handoffs: Handoff[] = [];
+    private traceManager = new TraceManager();
+    private structuredOutput?: StructuredOutput;
     private toolRegistry = new ToolRegistry();
     private memory = new MemoryStore();
     private inputGuardrails: InputGuardrail[] = [];
@@ -35,7 +40,7 @@ export class Agent {
         addToolGuardrail(guardrail: ToolGuardrail) {
             this.toolGuardrails.push(guardrail);
         }
-    
+            
     getTools() {
         return this.toolRegistry.getTools();
     }
@@ -45,7 +50,9 @@ export class Agent {
     getInstructions() {
         return this.config.instructions;
     }
-
+    getTraceManager() {
+    return this.traceManager;
+    }
     getModel() {
         return this.config.model;
     }
@@ -59,6 +66,17 @@ export class Agent {
 
     getOutputGuardrails() {
         return this.outputGuardrails;
+    }
+    setStructuredOutput(
+        structuredOutput: StructuredOutput
+    ) {
+        this.structuredOutput = structuredOutput;
+    }
+    clearStructuredOutput() {
+        this.structuredOutput = undefined;
+    }
+    getStructuredOutput() {
+    return this.structuredOutput;
     }
 
     getToolGuardrails() {
@@ -85,6 +103,13 @@ export class Agent {
     // User:
     // ${userInput}
     // `;
+    addHandoff(handoff: Handoff) {
+        this.handoffs.push(handoff);
+    }
+
+    getHandoffs() {
+        return this.handoffs;
+}
     public async execute(userInput: string): Promise<AgentResult> {
         const output = await this.config.model.generate(userInput);
         //         const tools = this.toolRegistry.getTools();

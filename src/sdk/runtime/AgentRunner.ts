@@ -9,7 +9,27 @@ export class AgentRunner {
         sessionId: string
     ) {
         const tools = agent.getTools();
-        const session = agent.getMemory().getSession("sessionId");
+        const session = agent.getMemory().getSession(sessionId);
+        for (const handoff of agent.getHandoffs()) {
+            if (handoff.canHandle(userInput)) {
+                agent.getEvents().emit({
+                    type: "handoff.started",
+                    timestamp: new Date(),
+                    data: {
+                        agent: handoff.agentName,
+                    },
+                });
+
+                session.addMessage({
+                    role: "assistant",
+                    content: `Task handed off to ${handoff.agentName}`,
+                });
+
+                return {
+                    output: `Task handed off to ${handoff.agentName}`,
+                };
+            }
+        }
         agent.getEvents().emit({
             type: "agent.started",
             timestamp: new Date(),
@@ -18,6 +38,13 @@ export class AgentRunner {
                 userInput,
             },
         });
+        agent.getTraceManager().start({
+            runId: sessionId,
+            agentName: "Main Agent",
+            startedAt: new Date(),
+            events: [],
+        });
+        
         for (const guardrail of agent.getInputGuardrails()) {
            const result = await guardrail.check(userInput);
 
@@ -95,13 +122,29 @@ Otherwise respond:
 }
 
 Conversation History:
-
 ${history}
-
 Current User:
-
 ${userInput}
-`;
+${agent.getStructuredOutput()
+? `
+The final response MUST follow the normal agent format.
+
+The value inside "answer" must match this schema:
+
+${agent.getStructuredOutput()!.description ?? ""}
+
+Respond ONLY in this format:
+
+{
+  "action":"final",
+  "answer": {
+    // object matching the schema above
+  }
+}
+
+Do not return markdown.
+Do not return any explanation outside the JSON.
+`: ""}`;
         console.log("========== PROMPT ==========");
         console.log(prompt);
         console.log("============================");
@@ -121,6 +164,13 @@ ${userInput}
         while (currentResponse.action === "tool" && iterations < 5) {
             iterations++;
             agent.getEvents().emit({
+                type: "tool.selected",
+                timestamp: new Date(),
+                data: {
+                    tool: currentResponse.tool,
+                },
+            });
+            agent.getTraceManager().addEvent(sessionId, {
                 type: "tool.selected",
                 timestamp: new Date(),
                 data: {
@@ -200,11 +250,23 @@ ${userInput}
 
             ${scratchpad}
 
-            Available Tools:
+             Available Tools:
 
             ${toolDescriptions}
 
-            If more tools are required,
+            ${
+            agent.getStructuredOutput()
+            ? `
+            The final response MUST follow the standard agent response format.
+
+            The "answer" field MUST match the following schema:
+
+            ${agent.getStructuredOutput()!.description ?? ""}
+        `
+        : ""
+        }
+
+If more tools are required,
             respond ONLY with:
 
             {
@@ -248,6 +310,40 @@ ${userInput}
                 type: "guardrail.output.passed",
                 timestamp: new Date(),
             });
+        // const structuredOutput = agent.getStructuredOutput();
+        //     if (structuredOutput) {
+        //         try {
+        //             const parsed = JSON.parse(currentResponse.answer);
+
+        //             const validation = structuredOutput.schema.safeParse(parsed);
+
+        //             if (!validation.success) {
+        //                 return {
+        //                     output: `Structured output validation failed:\n${validation.error.message}`,
+        //                 };
+        //             }
+
+        //             return {
+        //                 output: validation.data,
+        //             };
+        //         } catch {
+        //             return {
+        //                 output: "Model did not return valid JSON.",
+        //             };
+        //         }
+        //     }
+        const structuredOutput = agent.getStructuredOutput();
+        if (structuredOutput) {
+            const validation = structuredOutput.schema.safeParse(
+                currentResponse.answer
+            );
+            if (!validation.success) {
+                return {
+                    output: `Structured output validation failed:\n${validation.error.message}`,
+                };
+            }
+            currentResponse.answer = validation.data;
+        }
             session.addMessage({
                 role: "assistant",
                 content: currentResponse.answer,
@@ -257,8 +353,27 @@ ${userInput}
                 timestamp: new Date(),
                 data: {
                     sessionId,
+                    userInput,
                 },
             });
+            agent.getTraceManager().addEvent(sessionId, {
+                type: "agent.finished",
+                timestamp: new Date(),
+                data: {
+                    sessionId,
+                    userInput,
+
+                },
+            });
+            agent.getTraceManager().addEvent(sessionId, {
+                type: "agent.started",
+                timestamp: new Date(),
+                data: {
+                    sessionId,
+                    userInput,
+                },
+            });
+            agent.getTraceManager().finish(sessionId);
             return {
                 output: currentResponse.answer,
             };
@@ -267,5 +382,29 @@ ${userInput}
         return {
             output: "Maximum iterations reached.",
         };
+    }
+    async *runStream(
+    agent: Agent,
+    userInput: string,
+    sessionId: string
+)   {
+
+        const prompt = `
+    You are an AI Agent.
+
+    Instructions:
+    ${agent.getInstructions()}
+
+    User:
+
+    ${userInput}
+    `;
+
+        for await (const chunk of agent
+            .getModel()
+            .generateStream(prompt)) {
+
+            yield chunk;
+        }
     }
 }   

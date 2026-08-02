@@ -10,4 +10,7 @@ export interface AgentResult {
 
 export interface ModelProvider {
   generate(prompt: string): Promise<string>;
+  generateStream(
+    prompt: string
+  ): AsyncIterable<string>;
 }
